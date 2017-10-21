@@ -40,12 +40,26 @@ class BatchEmailerGAPI:
 		self.service = self.authorize()
 
 	def load_recipients(self, path):
+		"""
+		Helper function that parses the recipients.txt file to generate a hashset
+		of recipients. 
+
+		Returns:
+			None
+		"""
 		if path:
 			with open(path) as f:
 				for line in f.readlines():
 					self.recipients.add(line)
 
 	def get_message(self, path):
+		"""
+		Helper function that parses the message_text.txt file to generate a string
+		of the email body to be used when generating the email message.
+
+		Returns:
+			None
+		"""
 		if path:
 			contents = []
 			with open(path) as f:
@@ -54,7 +68,8 @@ class BatchEmailerGAPI:
 			return ''.join(contents)
 
 	def get_credentials(self):
-	    """Gets valid user credentials from storage.
+	    """
+	    Gets valid user credentials from storage.
 
 	    If nothing has been stored, or if the stored credentials are invalid,
 	    the OAuth2 flow is completed to obtain the new credentials.
@@ -83,7 +98,11 @@ class BatchEmailerGAPI:
 
 	def authorize(self):
 		"""
-		docs
+		Authenticates credentials. Uses the get_credentials helper function
+		to authenticate the email corresponding to the user name.
+
+		Returns:
+			discovery object to be used for sending emails
 		"""
 		credentials = self.get_credentials()
 		http = credentials.authorize(httplib2.Http())
@@ -91,7 +110,17 @@ class BatchEmailerGAPI:
 
 	def create_message(self, to_addr, subject, message_text):
 		"""
-		docs
+		Creates a MIMEText object out of the given speicications. Encodes 
+		the object then decodes to get the raw string of the encoded object
+		for security reasons.
+		
+		Args:
+			to_addr: recipient's email address
+			subject: subject line in the email
+			message_text: body of email
+
+		Returns:
+			map containing raw text of the MIMEText message
 		"""
 		message = MIMEText(message_text)
 		message['to'] = to_addr
@@ -102,7 +131,15 @@ class BatchEmailerGAPI:
 
 	def send_message(self, to_addr=None):
 		"""
-		docs
+		Main method that sends the email. Creates a MIMEText object using a helper
+		function then uses the discovery object created upon authenticatation to 
+		send the email. Prints the response id given back by the server for each 
+		email sent. After all recipients have been processed, accounts associated
+		with failed attemps are recorded back into the recipients.txt file for 
+		future attempts.
+
+		Returns:
+			None
 		"""
 		if not to_addr: # set default recipient to self
 			to_addr = self.username
@@ -118,11 +155,18 @@ class BatchEmailerGAPI:
 				print('Message ID: {0}'.format(response['id']))
 			except errors.HttpError as error:
 				print('An Error Occured: {0}. Could not send email to {1}'.format(error, recipient))
-				self.recipients.add(recipient) # remove if successful
+				self.recipients.add(recipient) # re-add if email send unsuccessful
 
-		self.update_recipient_list()
+		self.update_recipient_list() # update recipient list with a list of failed accounts
 		
 	def update_recipient_list(self):
+		"""
+		Helper function that writes the list of email accounts associated with 
+		failed attempts to the recipients.txt file.
+
+		Returns:
+			None
+		"""
 		with open(self.recipients_path, 'w') as f:
 			for recipient in self.recipients:
 				print(recipient)
